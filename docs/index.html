@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpiralBench viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #eff1f4;
+    --panel: #ffffff;
+    --ink: #1b2733;
+    --muted: #5b6b7a;
+    --hairline: #d8dde4;
+    --risky: #b33a48;
+    --risky-soft: #f3dfe1;
+    --prot: #1c7c8c;
+    --prot-soft: #dcebee;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px;
+           border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 18px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  h1 .sub { color: var(--muted); font-weight: 400; }
+  .bench-switch { font-size: 13px; color: var(--muted); }
+  .bench-switch a { color: var(--prot); }
+
+  nav { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  nav button { font: 500 13px var(--sans); color: var(--ink); background: none;
+               border: 1px solid var(--hairline); border-radius: 999px;
+               padding: 5px 14px; cursor: pointer; }
+  nav button:hover { border-color: var(--ink); }
+  nav button.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  nav button:focus-visible, .actions button:focus-visible, .toggle:focus-visible,
+  details summary:focus-visible { outline: 2px solid var(--prot); outline-offset: 2px; }
+
+  .cat-desc { color: var(--muted); font-size: 13.5px; max-width: 78ch; margin: 0 0 18px; }
+
+  .question { background: var(--panel); border: 1px solid var(--hairline);
+              border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
+  .eyebrow { font: 600 11px var(--mono); text-transform: uppercase;
+             letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+  .opening { font-size: 15px; white-space: pre-wrap; margin: 0;
+             max-height: 12em; overflow: hidden; position: relative; }
+  .opening.clamped::after { content: ""; position: absolute; inset: auto 0 0 0;
+    height: 2.6em; background: linear-gradient(transparent, var(--panel)); }
+  .opening.open { max-height: none; }
+  .toggle { background: none; border: none; color: var(--prot);
+            font: 500 13px var(--sans); cursor: pointer; padding: 4px 0 0; }
+  .q-meta { font: 400 11.5px var(--mono); color: var(--muted); margin-top: 10px; }
+
+  .actions { display: flex; gap: 8px; align-items: center; margin: 16px 0 20px; flex-wrap: wrap; }
+  .actions button { font: 500 14px var(--sans); background: var(--ink); color: var(--paper);
+                    border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+  .actions button.secondary { background: none; color: var(--ink); border: 1px solid var(--ink); }
+  .actions .note { color: var(--muted); font-size: 13px; margin-left: auto; font-family: var(--mono); }
+
+  .card { background: var(--panel); border: 1px solid var(--hairline);
+          border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; }
+  .card-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .rank { font: 700 13px var(--mono); color: var(--muted); min-width: 2ch; }
+  .model-name { font-weight: 700; font-size: 15px; flex: 1 1 200px; }
+  .score-num { font: 700 20px var(--mono); }
+  .score-num.pos { color: var(--risky); }
+  .score-num.neg { color: var(--prot); }
+  .score-num .unit { font: 400 11px var(--mono); color: var(--muted);
+                     display: block; text-align: right; }
+
+  .meter { position: relative; height: 14px; border-radius: 7px; margin: 12px 0 4px;
+           background: linear-gradient(to right, var(--prot-soft), #eef0f3 30%, var(--risky-soft)); }
+  .meter .zero { position: absolute; top: -3px; bottom: -3px; width: 2px;
+                 background: var(--ink); opacity: 0.35; }
+  .meter .bar { position: absolute; top: 2px; bottom: 2px; border-radius: 5px; }
+  .meter .bar.pos { background: var(--risky); }
+  .meter .bar.neg { background: var(--prot); }
+  .meter-labels { display: flex; justify-content: space-between;
+                  font: 400 10.5px var(--mono); color: var(--muted); margin-bottom: 10px; }
+
+  .stat-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip { font: 500 11px var(--mono); background: var(--paper);
+          border: 1px solid var(--hairline); border-radius: 4px;
+          padding: 1px 6px; color: var(--muted); cursor: default; }
+  .chip.risky { border-color: var(--risky); color: var(--risky); }
+  .chip.prot { border-color: var(--prot); color: var(--prot); }
+  .chip.stat { border-color: var(--ink); color: var(--ink); }
+
+  details.quotes, details.transcript { border-top: 1px dashed var(--hairline);
+    padding-top: 8px; margin-top: 8px; }
+  details summary { cursor: pointer; font: 600 11px var(--mono);
+    text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .quote { display: flex; gap: 10px; align-items: baseline; margin: 8px 0;
+           font-size: 13.5px; }
+  .quote .tag { flex: 0 0 auto; font: 500 10.5px var(--mono); border-radius: 4px;
+                padding: 1px 6px; border: 1px solid; }
+  .quote.risky .tag { color: var(--risky); border-color: var(--risky); background: var(--risky-soft); }
+  .quote.prot .tag { color: var(--prot); border-color: var(--prot); background: var(--prot-soft); }
+  .quote .txt { color: #2c3a47; }
+  .quote .txt::before { content: "“"; color: var(--muted); }
+  .quote .txt::after { content: "”"; color: var(--muted); }
+
+  .turns { margin-top: 10px; }
+  .loading { color: var(--muted); font-style: italic; font-size: 13px; }
+  .turn { border-left: 3px solid var(--hairline); padding: 4px 0 4px 12px; margin: 10px 0;
+          font-size: 13.5px; white-space: pre-wrap; color: #2c3a47; }
+  .turn.assistant { border-left-color: var(--ink); }
+  .turn b { font: 600 10.5px var(--mono); text-transform: uppercase;
+            letter-spacing: 0.06em; color: var(--muted); display: block; }
+  mark.hl { border-radius: 2px; padding: 0 1px; cursor: help;
+            border-bottom: 2px solid; color: inherit; }
+  mark.hl.risky { background: var(--risky-soft); border-bottom-color: var(--risky); }
+  mark.hl.prot { background: var(--prot-soft); border-bottom-color: var(--prot); }
+  .turn-flags { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 6px; }
+  .turn-flags .chip { cursor: help; }
+  .hl-legend { font: 400 11.5px var(--mono); color: var(--muted); margin: 8px 0 0; }
+  .hl-legend mark.hl { cursor: default; }
+
+  .empty { color: var(--muted); font-style: italic; padding: 30px 0; text-align: center; }
+  @media (prefers-reduced-motion: no-preference) {
+    .meter .bar { transition: width 0.35s ease, left 0.35s ease; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SpiralBench <span class="sub">/ conversation viewer</span></h1>
+    
+    <nav id="tabs" aria-label="Category"></nav>
+  </header>
+  <p class="cat-desc" id="cat-desc"></p>
+  <div id="question"></div>
+  <div class="actions">
+    <button id="btn-new">New random scenario</button>
+    <button id="btn-resample" class="secondary">Resample models</button>
+    <span class="note" id="note"></span>
+  </div>
+  <div id="results"></div>
+</div>
+
+<script>
+const N_MODELS = 5;
+const state = { idx: null, rubric: null, cat: null, scenario: null };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => (s ?? "").replace(/[&<>"']/g, (c) =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const fmt = (v) => v == null ? "–" : (Math.round(v * 100) / 100).toString();
+
+// Rubric descriptions per metric id, parsed from the rubric text for chip tooltips.
+function rubricLookup(text) {
+  const map = {};
+  let desc = [];
+  for (const line of text.split("\n")) {
+    const m = line.match(/^id:\s*"([\w-]+)"/);
+    if (m) { map[m[1]] = desc.join(" ").replace(/^#+\s*/, "").trim(); }
+    else if (line.startsWith("#")) desc = [line.replace(/^#+\s*/, "")];
+    else if (line.trim()) desc.push(line.trim());
+  }
+  return map;
+}
+
+async function init() {
+  state.idx = await (await fetch("data/index.json")).json();
+  state.rubric = rubricLookup(state.idx.rubric);
+  const tabs = $("tabs");
+  for (const c of state.idx.categories) {
+    const b = document.createElement("button");
+    b.textContent = c.title;
+    b.dataset.cat = c.id;
+    b.onclick = () => setCategory(c.id);
+    tabs.appendChild(b);
+  }
+  $("btn-new").onclick = () => newScenario();
+  $("btn-resample").onclick = () => renderResults();
+  $("cat-desc").textContent =
+    "Each scenario is a multiturn conversation between a suggestible simulated user "
+    + `(played by ${state.idx.user_model}) and the evaluated model. Three judges flag `
+    + "protective behaviours (pushback, de-escalation, boundary-setting, …) and risky "
+    + "ones (sycophancy, delusion reinforcement, escalation, …) in every assistant "
+    + "turn. Spiral score = weighted risky − protective incidences, summed over the "
+    + "conversation and averaged across judges — higher means the conversation went "
+    + "further off the rails.";
+  const ids = state.idx.categories.map(c => c.id);
+  const fromHash = location.hash.replace("#", "");
+  setCategory(ids.includes(fromHash) ? fromHash : pick(ids));
+}
+
+function setCategory(cat) {
+  state.cat = cat;
+  history.replaceState(null, "", "#" + cat);
+  for (const b of $("tabs").children) b.classList.toggle("active", b.dataset.cat === cat);
+  newScenario();
+}
+
+function newScenario() {
+  const cat = state.idx.categories.find(c => c.id === state.cat);
+  state.scenario = state.idx.scenarios[pick(cat.scenarios)];
+  renderScenario();
+  renderResults();
+}
+
+function renderScenario() {
+  const sc = state.scenario;
+  const nTurns = Math.max(0, ...Object.values(sc.models).map(m => m.n_assistant_turns || 0));
+  $("question").innerHTML = `<div class="question">
+    <div class="eyebrow">Opening user message · scenario ${esc(sc.id)}</div>
+    <p class="opening">${esc(sc.opening)}</p>
+    <div class="q-meta">user played by ${esc(state.idx.user_model)} · ${nTurns} assistant turns per conversation</div>
+  </div>`;
+  clampToggle(document.querySelector(".opening"), "Show full message");
+}
+
+// Metric polarity: risky (crimson), protective (teal), or neutral (unknown
+// metrics get no color rather than silently reading as protective).
+function polarity(metric) {
+  return state.idx.risky.includes(metric) ? "risky"
+    : state.idx.protective.includes(metric) ? "prot" : "";
+}
+
+function clampToggle(el, label) {
+  if (!el || el.scrollHeight <= el.clientHeight + 4) return;
+  el.classList.add("clamped");
+  const btn = document.createElement("button");
+  btn.className = "toggle";
+  btn.textContent = label;
+  btn.onclick = () => {
+    const open = el.classList.toggle("open");
+    el.classList.toggle("clamped", !open);
+    btn.textContent = open ? "Collapse" : label;
+  };
+  el.after(btn);
+}
+
+function meterHTML(score) {
+  if (score == null) return "";
+  const [lo, hi] = state.idx.scale;
+  const clamped = Math.max(lo, Math.min(hi, score));
+  const zeroPct = (-lo / (hi - lo)) * 100;
+  const pct = (Math.abs(clamped) / (hi - lo)) * 100;
+  const bar = clamped >= 0
+    ? `<div class="bar pos" style="left:${zeroPct}%;width:${pct}%"></div>`
+    : `<div class="bar neg" style="left:${zeroPct - pct}%;width:${pct}%"></div>`;
+  return `<div class="meter"><div class="zero" style="left:${zeroPct}%"></div>${bar}</div>
+    <div class="meter-labels"><span>${lo} protective</span><span>0</span><span>+${hi} risky (clamped)</span></div>`;
+}
+
+function metricChips(r) {
+  const chips = [];
+  const entries = Object.entries(r.metrics).filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  for (const [m, v] of entries) {
+    const cls = polarity(m);
+    const w = state.idx.weights[m];
+    chips.push(`<span class="chip ${cls}" title="${esc(state.rubric[m] || m)}${
+      w === 0 ? " (weight 0 — not scored)" : ""}">${esc(m)} ${fmt(v)}</span>`);
+  }
+  return chips.join("");
+}
+
+function quotesHTML(r) {
+  if (!r.quotes.length) return "";
+  const rows = r.quotes.map(q => {
+    return `<div class="quote ${polarity(q.metric)}">
+      <span class="tag" title="intensity ${esc(String(q.intensity))} · judge ${esc(q.judge)}">${esc(q.metric)} ·${esc(String(q.intensity))}</span>
+      <span class="txt">${esc(q.text)}</span></div>`;
+  }).join("");
+  return `<details class="quotes"><summary>Judge-flagged quotes (${r.quotes.length})</summary>${rows}</details>`;
+}
+
+function renderResults() {
+  const models = Object.values(state.scenario.models);
+  for (let i = models.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [models[i], models[j]] = [models[j], models[i]];
+  }
+  const sample = models.slice(0, N_MODELS)
+    .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity));
+  $("note").textContent = `showing ${sample.length} of ${models.length} models`;
+
+  $("results").innerHTML = sample.map((r, i) => `
+    <div class="card" data-model="${esc(r.model)}">
+      <div class="card-head">
+        <span class="rank">#${i + 1}</span>
+        <span class="model-name">${esc(r.model)}</span>
+        <span class="score-num ${r.score > 0 ? "pos" : r.score < 0 ? "neg" : ""}">
+          ${fmt(r.score)}<span class="unit">spiral score</span></span>
+      </div>
+      ${meterHTML(r.score)}
+      <div class="stat-row">
+        <span class="chip stat" title="weighted risky incidences (judge-averaged)">risky ${fmt(r.risky)}</span>
+        <span class="chip stat" title="weighted protective incidences (judge-averaged)">protective ${fmt(r.protective)}</span>
+        <span class="chip stat" title="final judge rating of how far the conversation went off the rails, 0–10">off-rails ${fmt(r.off_rails)}</span>
+      </div>
+      <div class="stat-row">${metricChips(r)}</div>
+      ${quotesHTML(r)}
+      <details class="transcript"><summary>Full transcript</summary>
+        <div class="turns"><span class="loading">Loading…</span></div>
+      </details>
+    </div>`).join("");
+
+  for (const det of document.querySelectorAll("details.transcript")) {
+    det.addEventListener("toggle", () => {
+      if (det.open && !det.dataset.loaded) loadTranscript(det);
+    });
+  }
+}
+
+// Render one turn's content with judge-flagged spans highlighted.
+function highlightedTurnHTML(content, flags) {
+  const flagTitle = (f) =>
+    `${f.metric} · intensity ${f.intensity} · ${f.judges.join(", ")}`;
+  const flagClass = (f) => polarity(f.metric);
+
+  // Flatten spans, sort, and drop overlaps (first-come wins).
+  const spans = [];
+  for (const f of flags) for (const [s, e] of f.spans) spans.push({ s, e, f });
+  spans.sort((a, b) => a.s - b.s || b.e - a.e);
+  let out = "", pos = 0;
+  for (const { s, e, f } of spans) {
+    if (s < pos || e > content.length) continue;
+    out += esc(content.slice(pos, s));
+    out += `<mark class="hl ${flagClass(f)}" title="${esc(flagTitle(f))}">${
+      esc(content.slice(s, e))}</mark>`;
+    pos = e;
+  }
+  out += esc(content.slice(pos));
+
+  // Flags whose quote couldn't be located in the text: chips above the turn.
+  const unlocated = flags.filter(f => !f.spans.length);
+  const chips = unlocated.length
+    ? `<div class="turn-flags">${unlocated.map(f =>
+        `<span class="chip ${flagClass(f)}" title="quote not located verbatim · ${
+          esc(flagTitle(f))} · “${esc(f.text.slice(0, 160))}”">⚑ ${esc(f.metric)} ·${
+          esc(String(f.intensity))}</span>`).join("")}</div>`
+    : "";
+  return chips + out;
+}
+
+async function loadTranscript(det) {
+  const card = det.closest(".card");
+  const model = card.dataset.model;
+  const turns = det.querySelector(".turns");
+  det.dataset.loaded = "1";   // guard against re-fetch on every toggle
+  try {
+    const res = await fetch(`data/transcripts/${encodeURIComponent(model)}--${
+      encodeURIComponent(state.scenario.id)}.json`);
+    if (!res.ok) throw new Error(res.statusText);
+    const data = await res.json();
+    const byTurn = {};
+    for (const f of data.flags || []) (byTurn[f.turn] ??= []).push(f);
+    turns.innerHTML = `
+      <div class="hl-legend">score-affecting sections flagged by judges:
+        <mark class="hl risky">risky</mark> / <mark class="hl prot">protective</mark>
+        — hover for metric &amp; judge; ⚑ chips are flags whose quote wasn't located verbatim</div>`
+      + data.transcript.map((t, i) => `
+      <div class="turn ${esc(t.role)}"><b>${esc(t.role)}</b>${
+        byTurn[i] ? highlightedTurnHTML(t.content, byTurn[i]) : esc(t.content)
+      }</div>`).join("");
+  } catch (e) {
+    delete det.dataset.loaded;
+    turns.innerHTML = '<span class="loading">Load failed — close and reopen to retry.</span>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

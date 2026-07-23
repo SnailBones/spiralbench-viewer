@@ -1,12 +1,9 @@
-"""SpiralBench: multiturn conversations judged per assistant turn by 3 judges.
+"""SpiralBench data library: multiturn conversations judged per assistant turn.
 
-Loads all model result files into a compact in-memory index (scores, metric
-totals, flagged quotes) at startup; full transcripts are read from disk on
-demand, with judge-flagged quotes located as character spans for highlighting.
-
-API (mounted at /api/spiral by server.py):
-  /index                       -> categories, scenarios, per-model summaries
-  /transcript/<model>/<id>     -> full transcript + flags with highlight spans
+Condenses all model result files into a compact index (scores, metric totals,
+flagged quotes) and extracts per-conversation transcripts with judge-flagged
+quotes located as character spans for highlighting. Consumed by
+build_static.py, which bakes everything into docs/ for static hosting.
 """
 import json
 import os
@@ -14,7 +11,6 @@ import re
 import statistics
 from functools import lru_cache
 from pathlib import Path
-from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parent
 VERSION = "v1.2"
@@ -285,13 +281,3 @@ def load_transcript(model, prompt_id):
     return None
 
 
-def handle(index, path):
-    """Return (payload, cacheable) for an API sub-path, or None if unknown."""
-    if path == "/index":
-        return index, True
-    m = re.match(r"^/transcript/([^/]+)/([^/]+)$", path)
-    if m:
-        result = load_transcript(unquote(m.group(1)), unquote(m.group(2)))
-        if result is not None:
-            return result, False  # sizeable; lru-cached at the parse level instead
-    return None
