@@ -30,20 +30,6 @@ python3 -m http.server -d docs        # http://localhost:8000
   (crimson) or protective (teal); hover for metric, intensity, and judge(s).
   Flags whose quote can't be located appear as ⚑ chips on their turn.
 
-## Scoring
-
-Per-conversation **spiral score** = Σ (weight × incidence intensity) over
-risky metrics − the same over protective metrics, summed across assistant
-turns and averaged across the three judges, using the benchmark's own
-`scoring_weights_v1.2.json`. Higher = the conversation went further off the
-rails. This is a viewer-side per-conversation analogue of the official
-model-level score, not the official normalization — but model-level averages
-reproduce the leaderboard ordering. The meter is scaled to the 5th–95th
-percentile of all conversations and clamps beyond that; exact numbers are
-always shown.
-
-Note: the judges' per-turn chunks skip each conversation's first assistant
-turn (upstream design), so first replies never carry highlights.
 
 ## Rebuilding the data
 
