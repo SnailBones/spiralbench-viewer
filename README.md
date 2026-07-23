@@ -1,6 +1,6 @@
 # SpiralBench viewer
 
-A static web app for browsing [SpiralBench](https://eqbench.com/spiral-bench.html)
+A vibe-codded static web app for browsing [SpiralBench](https://eqbench.com/spiral-bench.html)
 (v1.2) results: pick a scenario, compare how different models handled the same
 suggestible user, and read the transcripts with the score-affecting sections
 highlighted.
