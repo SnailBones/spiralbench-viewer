@@ -1,4 +1,4 @@
-# SpiralBench viewer
+# [SpiralBench viewer](https://snailbones.github.io/spiralbench-viewer)
 
 A vibe-codded static web app for browsing [SpiralBench](https://eqbench.com/spiral-bench.html)
 (v1.2) results: pick a scenario, compare how different models handled the same
